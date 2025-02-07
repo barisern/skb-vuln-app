@@ -1,0 +1,461 @@
+{% extends "layouts/base.html.twig" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<script>
+(function() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.role !== 'admin') {
+            showNotification('Access denied: Admin privileges required', 'error');
+            setTimeout(() => window.location.href = '/login', 1500);
+            return;
+        }
+    } catch (e) {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+        return;
+    }
+})();
+</script>
+
+<div class="container mx-auto px-4">
+    <!-- Admin Navigation -->
+    <div class="mb-6">
+        <a href="/admin/users" 
+           class="inline-block bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            User Management
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Settings Section -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-bold mb-4">Settings</h2>
+            
+            <!-- Debug Mode Setting -->
+            <div class="mb-4 p-4 border rounded-lg bg-gray-50">
+                <label class="block text-gray-700 text-sm font-bold mb-2">[BETA] Debug Mode API (Checkbox On/Off)</label>
+                <div class="flex items-center space-x-4">
+                    <input type="checkbox" id="debugMode" class="form-checkbox h-5 w-5 text-blue-600">
+                    <input type="password" id="debugToken" placeholder="Enter Debug Token" 
+                           class="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    <button onclick="toggleDebugMode()" 
+                            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                        Save
+                    </button>
+                </div>
+            </div>
+
+            <!-- Fake Settings for UI -->
+            <div class="space-y-4">
+                <!-- Cache Settings -->
+                <div class="p-4 border rounded-lg bg-gray-50">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Cache Settings</label>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <input type="checkbox" checked class="form-checkbox h-5 w-5 text-gray-400">
+                            <span class="text-sm text-gray-600">Enable Page Cache</span>
+                        </div>
+                        <span class="text-xs text-gray-500">24 hours</span>
+                    </div>
+                </div>
+
+                <!-- Email Settings -->
+                <div class="p-4 border rounded-lg bg-gray-50">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Email Configuration</label>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm text-gray-600">SMTP Server</span>
+                        <span class="text-sm font-mono text-gray-500">smtp.example.com</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Port</span>
+                        <span class="text-sm font-mono text-gray-500">587</span>
+                    </div>
+                </div>
+
+                <!-- API Settings -->
+                <div class="p-4 border rounded-lg bg-gray-50">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">API Settings</label>
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center space-x-2">
+                            <input type="checkbox" checked class="form-checkbox h-5 w-5 text-gray-400">
+                            <span class="text-sm text-gray-600">Rate Limiting</span>
+                        </div>
+                        <span class="text-xs text-gray-500">100 req/min</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">API Version</span>
+                        <span class="text-sm font-mono text-gray-500">v1.0.3</span>
+                    </div>
+                </div>
+
+                <!-- Maintenance Mode -->
+                <div class="p-4 border rounded-lg bg-gray-50">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Maintenance Mode</label>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <input type="checkbox" class="form-checkbox h-5 w-5 text-gray-400">
+                            <span class="text-sm text-gray-600">Enable Maintenance Mode</span>
+                        </div>
+                        <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">System Online</span>
+                    </div>
+                </div>
+
+                <!-- Backup Settings -->
+                <div class="p-4 border rounded-lg bg-gray-50">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Backup Configuration</label>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm text-gray-600">Last Backup</span>
+                        <span class="text-sm text-gray-500">2024-02-20 03:45 UTC</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Backup Frequency</span>
+                        <span class="text-sm text-gray-500">Daily</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gift Cards Section -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-bold mb-4">Gift Cards</h2>
+            <form id="createGiftCardForm" class="mb-6">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="giftCardAmount">
+                        Amount
+                    </label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2 text-gray-500">$</span>
+                        <input type="number" id="giftCardAmount" min="1" step="0.01" required
+                            class="shadow appearance-none border rounded w-full py-2 pl-8 pr-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                    </div>
+                </div>
+                <button type="submit"
+                    class="w-full bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition duration-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                    Create Gift Card
+                </button>
+            </form>
+            <div class="overflow-hidden rounded-lg border border-gray-200">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Code
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Amount
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="giftCardsList" class="bg-white divide-y divide-gray-200">
+                        <!-- Gift cards will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Product Management Section -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-bold mb-4">Product Management</h2>
+            
+            <!-- Add Product Form -->
+            <form id="addProductForm" class="mb-6 space-y-4">
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="name">Product Name</label>
+                    <input type="text" id="name" name="name" required
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="description">Description</label>
+                    <textarea id="description" name="description" rows="3" required
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="price">Price ($)</label>
+                        <input type="number" id="price" name="price" step="0.01" min="0" required
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="stock">Stock</label>
+                        <input type="number" id="stock" name="stock" min="0" required
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    </div>
+                </div>
+
+                <div class="flex items-center">
+                    <input type="checkbox" id="featured" name="featured"
+                        class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                    <label for="featured" class="ml-2 text-sm text-gray-700">Featured Product</label>
+                </div>
+
+                <button type="submit"
+                    class="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300">
+                    Add Product
+                </button>
+            </form>
+
+            <!-- Bulk Upload Form -->
+            <form id="bulkUploadForm">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="productFile">
+                        Bulk Product Import
+                    </label>
+                    <input type="file" id="productFile" name="productFile" accept=".products" required
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div class="flex space-x-2">
+                    <button type="submit"
+                        class="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition duration-300">
+                        Import Products
+                    </button>
+                    <button type="button" id="exportProductsBtn"
+                        class="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300">
+                        Export Products
+                    </button>
+                    <button type="button" id="exportExampleBtn"
+                        class="flex-1 bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition duration-300">
+                        Export Example
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+async function toggleDebugMode() {
+    const token = document.getElementById('debugToken').value;
+    const enabled = document.getElementById('debugMode').checked;
+    
+    try {
+        const response = await fetch('/api/admin/settings/debug', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ token, enabled })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            showNotification('Debug mode settings updated', 'success');
+        } else {
+            showNotification('Invalid token or error updating settings', 'error');
+        }
+    } catch (error) {
+        showNotification('Error updating settings', 'error');
+    }
+}
+
+(async function() {
+    try {
+        const response = await fetch('/api/admin/settings/debug', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        const data = await response.json();
+        document.getElementById('debugMode').checked = data.enabled;
+    } catch (error) {
+        console.error('Error loading debug mode state:', error);
+    }
+})();
+
+async function loadGiftCards() {
+    try {
+        const response = await fetch('/api/admin/gift-cards', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        const data = await response.json();
+        const giftCardsList = document.getElementById('giftCardsList');
+        giftCardsList.innerHTML = '';
+        
+        if (Array.isArray(data) && data.length > 0) {
+            data.forEach(card => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50 transition-colors duration-200';
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                ${card.code}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <div class="text-sm font-semibold">$${card.amount.toFixed(2)}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            card.used 
+                                ? 'bg-red-100 text-red-800' 
+                                : 'bg-green-100 text-green-800'
+                        }">
+                            ${card.used ? 'Used' : 'Available'}
+                        </span>
+                    </td>
+                `;
+                giftCardsList.appendChild(row);
+            });
+        } else {
+            giftCardsList.innerHTML = `
+                <tr>
+                    <td colspan="3" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                        <div class="flex flex-col items-center justify-center py-6">
+                            <svg class="h-12 w-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                            </svg>
+                            <span class="text-gray-500">No gift cards found</span>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+    } catch (error) {
+        showNotification('Error loading gift cards', 'error');
+        console.error('Error loading gift cards:', error);
+    }
+}
+
+$(document).ready(function() {
+    loadGiftCards();
+    
+    $('#createGiftCardForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        $.ajax({
+            url: '/api/admin/gift-cards',
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            contentType: 'application/json',
+            data: JSON.stringify({
+                amount: $('#giftCardAmount').val()
+            }),
+            success: function() {
+                loadGiftCards();
+                $('#giftCardAmount').val('');
+            }
+        });
+    });
+
+    $('#addProductForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        const data = {
+            name: formData.get('name'),
+            description: formData.get('description'),
+            price: parseFloat(formData.get('price')),
+            stock: parseInt(formData.get('stock')),
+            featured: formData.get('featured') === 'on'
+        };
+
+        $.ajax({
+            url: '/api/admin/products/add',
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function(response) {
+                if (response.success) {
+                    showNotification('Product added successfully!', 'success');
+                    e.target.reset();
+                }
+            },
+            error: function(xhr) {
+                showNotification('Failed to add product: ' + (xhr.responseJSON?.error || 'Unknown error'), 'error');
+            }
+        });
+    });
+    
+    $('#bulkUploadForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const fileInput = document.getElementById('productFile');
+        const file = fileInput.files[0];
+        if (!file) {
+            showNotification('Please select a file', 'error');
+            return;
+        }
+
+        if (!file.name.endsWith('.products')) {
+            showNotification('Only .products files are allowed', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        $.ajax({
+            url: '/api/admin/products/upload',
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    showNotification('Products imported successfully!', 'success');
+                    fileInput.value = '';
+                }
+            },
+            error: function(xhr) {
+                showNotification('Failed to import products: ' + (xhr.responseJSON?.error || 'Unknown error'), 'error');
+            }
+        });
+    });
+
+    $('#exportExampleBtn').on('click', function() {
+        window.location.href = '/api/admin/products/export-example';
+    });
+
+    $('#exportProductsBtn').on('click', function() {
+        window.location.href = '/api/admin/products/export';
+    });
+});
+
+function showNotification(message, type = 'success') {
+    const notification = $('<div>')
+        .addClass('fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg transition-opacity duration-500')
+        .addClass(type === 'success' ? 'bg-green-500' : 'bg-red-500')
+        .addClass('text-white')
+        .text(message)
+        .appendTo('body');
+    
+    setTimeout(() => {
+        notification.fadeOut(500, function() {
+            $(this).remove();
+        });
+    }, 3000);
+}
+</script>
+{% endblock %} 

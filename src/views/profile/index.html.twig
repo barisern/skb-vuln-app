@@ -1,0 +1,215 @@
+{% extends "layouts/base.html.twig" %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<script>
+(function() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+})();
+</script>
+
+<div class="container mx-auto px-4">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8">My Profile</h1>
+        
+        <!-- Balance Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-bold">Current Balance</h2>
+                <span class="text-2xl font-bold text-green-500">$<span id="userBalanceDisplay">0.00</span></span>
+            </div>
+        </div>
+        
+        <!-- Gift Card Section -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold mb-4">Redeem Gift Card</h2>
+            <form id="redeemGiftCardForm">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="giftCardCode">
+                        Gift Card Code
+                    </label>
+                    <input type="text" id="giftCardCode" required
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        placeholder="Enter gift card code">
+                </div>
+                <button type="submit"
+                    class="w-full bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition duration-300">
+                    Redeem Gift Card
+                </button>
+            </form>
+        </div>
+        
+        <!-- Order History -->
+        <div class="bg-white rounded-lg shadow-md p-6 mt-6">
+            <h2 class="text-xl font-bold mb-4">Order History</h2>
+            <div id="ordersList" class="space-y-4">
+                <!-- Orders will be loaded here -->
+                <div class="text-gray-500 text-center py-4">Loading orders...</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function formatDate(mongoDate) {
+    try {
+        if (mongoDate && mongoDate.$date) {
+            if (typeof mongoDate.$date === 'string') {
+                return new Date(mongoDate.$date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+            if (typeof mongoDate.$date === 'number') {
+                return new Date(mongoDate.$date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+        }
+        
+        if (mongoDate) {
+            return new Date(mongoDate).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        return 'Date not available';
+    } catch (error) {
+        console.error('Error formatting date:', error, 'Date value:', mongoDate);
+        return 'Date not available';
+    }
+}
+
+function loadOrders() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    $.ajax({
+        url: '/api/orders',
+        method: 'GET',
+        headers: {
+            'Authorization': 'Bearer ' + token
+        },
+        success: function(response) {
+            const ordersList = $('#ordersList');
+            ordersList.empty();
+            
+            if (!response.orders || response.orders.length === 0) {
+                ordersList.html('<div class="text-gray-500 text-center py-4">No orders found</div>');
+                return;
+            }
+            
+            response.orders.forEach(order => {
+                console.log('Order created_at:', order.created_at);
+                const orderCard = `
+                    <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-semibold text-lg">${order.product.name}</h3>
+                                <p class="text-gray-600">${order.product.description}</p>
+                            </div>
+                            <span class="text-xl font-bold text-green-500">$${order.amount}</span>
+                        </div>
+                        <div class="mt-2 flex justify-between items-center text-sm text-gray-500">
+                            <span>Order ID: ${order.id}</span>
+                            <span>Purchased: ${formatDate(order.created_at)}</span>
+                        </div>
+                    </div>
+                `;
+                ordersList.append(orderCard);
+            });
+        },
+        error: function(xhr) {
+            const ordersList = $('#ordersList');
+            ordersList.html('<div class="text-red-500 text-center py-4">Failed to load orders</div>');
+            console.error('Failed to fetch orders:', xhr);
+        }
+    });
+}
+
+function updateBalance() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    $.ajax({
+        url: '/api/user-info',
+        method: 'GET',
+        headers: {
+            'Authorization': 'Bearer ' + token
+        },
+        success: function(response) {
+            $('#userBalanceDisplay').text(response.balance || '0.00');
+        },
+        error: function(xhr) {
+            console.error('Failed to fetch user info:', xhr);
+            if (xhr.status === 401) {
+                window.location.href = '/login';
+            }
+        }
+    });
+}
+
+$(document).ready(function() {
+    updateBalance();
+    loadOrders();
+    
+    $('#redeemGiftCardForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const submitButton = $(this).find('button[type="submit"]');
+        submitButton.prop('disabled', true);
+        
+        $.ajax({
+            url: '/api/gift-cards/redeem',
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token'),
+                'Content-Type': 'application/json'
+            },
+            data: JSON.stringify({
+                code: $('#giftCardCode').val()
+            }),
+            success: function(response) {
+                if (response.success) {
+                    showNotification('Gift card redeemed successfully! Balance updated.', 'success');
+                    $('#giftCardCode').val('');
+                    updateBalance();
+                } else {
+                    showNotification(response.error || 'Failed to redeem gift card', 'error');
+                }
+            },
+            error: function(xhr) {
+                const error = xhr.responseJSON ? xhr.responseJSON.error : 'Failed to redeem gift card';
+                showNotification(error, 'error');
+            },
+            complete: function() {
+                submitButton.prop('disabled', false);
+            }
+        });
+    });
+});
+
+window.addEventListener('purchase-success', function() {
+    loadOrders();
+    updateBalance();
+});
+</script>
+{% endblock %} 

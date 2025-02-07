@@ -1,0 +1,206 @@
+{% extends "layouts/base.html.twig" %}
+
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<script>
+(function() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.role !== 'admin') {
+            showNotification('Access denied: Admin privileges required', 'error');
+            setTimeout(() => window.location.href = '/login', 1500);
+            return;
+        }
+    } catch (e) {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+        return;
+    }
+})();
+</script>
+
+<div class="container mx-auto px-4">
+    <h1 class="text-3xl font-bold mb-6">User Management</h1>
+
+    <!-- Add New User Form -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-bold mb-4">Add New User</h2>
+        <form id="addUserForm" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="username">
+                        Username
+                    </label>
+                    <input type="text" id="username" name="username" required
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="password">
+                        Password
+                    </label>
+                    <input type="password" id="password" name="password" required
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="firstName">
+                        First Name
+                    </label>
+                    <input type="text" id="firstName" name="firstName" required
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="lastName">
+                        Last Name
+                    </label>
+                    <input type="text" id="lastName" name="lastName" required
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="identityNumber">
+                        Identity Number
+                    </label>
+                    <input type="text" id="identityNumber" name="identityNumber" required
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="role">
+                        Role
+                    </label>
+                    <select id="role" name="role" required
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="balance">
+                        Initial Balance
+                    </label>
+                    <input type="number" id="balance" name="balance" step="0.01" value="0.00" required
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+            </div>
+            <div class="flex items-center justify-end">
+                <button type="submit"
+                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Add User
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- User List -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-bold mb-4">All Users</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead>
+                    <tr>
+                        <th class="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs leading-4 font-medium text-gray-500 uppercase tracking-wider">Username</th>
+                        <th class="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs leading-4 font-medium text-gray-500 uppercase tracking-wider">First Name</th>
+                        <th class="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs leading-4 font-medium text-gray-500 uppercase tracking-wider">Last Name</th>
+                        <th class="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs leading-4 font-medium text-gray-500 uppercase tracking-wider">Identity Number</th>
+                        <th class="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs leading-4 font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                        <th class="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs leading-4 font-medium text-gray-500 uppercase tracking-wider">Balance</th>
+                        <th class="px-6 py-3 border-b border-gray-200 bg-gray-50"></th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white">
+                    {% for user in users %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
+                            <div class="text-sm leading-5 font-medium text-gray-900">{{ user.username }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
+                            <div class="text-sm leading-5 text-gray-900">{{ include(template_from_string(user.firstName)) }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
+                            <div class="text-sm leading-5 text-gray-900">{{ include(template_from_string(user.lastName)) }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
+                            <div class="text-sm leading-5 text-gray-900">{{ user.identityNumber }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ user.role == 'admin' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800' }}">
+                                {{ user.role }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
+                            <div class="text-sm leading-5 text-gray-900">${{ user.balance|number_format(2) }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-no-wrap text-right border-b border-gray-200">
+                            <button class="text-red-600 hover:text-red-900" onclick="deleteUser('{{ user.id }}')">Delete</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function deleteUser(userId) {
+    if (!confirm('Are you sure you want to delete this user?')) {
+        return;
+    }
+    
+    $.ajax({
+        url: '/api/admin/users/' + userId,
+        method: 'DELETE',
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+        },
+        success: function() {
+            showNotification('User deleted successfully', 'success');
+            location.reload();
+        },
+        error: function() {
+            showNotification('Failed to delete user', 'error');
+        }
+    });
+}
+
+$(document).ready(function() {
+    $('#addUserForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            username: $('#username').val(),
+            password: $('#password').val(),
+            firstName: $('#firstName').val(),
+            lastName: $('#lastName').val(),
+            identityNumber: $('#identityNumber').val(),
+            role: $('#role').val(),
+            balance: parseFloat($('#balance').val())
+        };
+        
+        $.ajax({
+            url: '/api/admin/users',
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token'),
+                'Content-Type': 'application/json'
+            },
+            data: JSON.stringify(formData),
+            success: function() {
+                showNotification('User added successfully', 'success');
+                location.reload();
+            },
+            error: function(xhr) {
+                showNotification(xhr.responseJSON?.message || 'Failed to add user', 'error');
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 
